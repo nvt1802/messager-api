@@ -16,7 +16,7 @@ app.use(express.json())
 
 const io = require("socket.io")(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: "*",
     methods: ["GET", "POST"],
   },
 })
@@ -56,6 +56,6 @@ io.on("connection", (socket) => {
 })
 
 
-require("./src/routes")(app, io)
+require("./src/routes")(app)
 
 server.listen(port, console.log(`server runing in port ${port}`))
