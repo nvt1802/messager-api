@@ -7,7 +7,7 @@ const Message = sequelize.define(
     message: dataTypes.STRING,
     avatar: dataTypes.STRING,
   },
-  { timestamps: false }
+  { timestamps: true }
 )
 
 module.exports = Message
