@@ -14,6 +14,27 @@ const Users = sequelize.define("users", {
     },
     field: "email",
   },
+  name: {
+    type: dataTypes.STRING,
+    validate: {
+      notEmpty: false,
+    },
+    field: "name",
+  },
+  birthday: {
+    type: dataTypes.STRING,
+    validate: {
+      notEmpty: false,
+    },
+    field: "birthday",
+  },
+  gender: {
+    type: dataTypes.BOOLEAN,
+    validate: {
+      notEmpty: false,
+    },
+    field: "gender",
+  },
   password: {
     type: dataTypes.STRING,
     validate: {
@@ -22,7 +43,7 @@ const Users = sequelize.define("users", {
     field: "password",
   },
   avatar: {
-    type: dataTypes.STRING,
+    type: dataTypes.STRING(1000),
     validate: {
       notEmpty: false,
     },
