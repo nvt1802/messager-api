@@ -52,4 +52,15 @@ uploadRouter.get("/download-avatar", async (req, res) => {
   res.download(path)
 })
 
+uploadRouter.get("/list-avatar", async (req, res) => {
+  let path = pathMD.join(__dirname.split("src")[0], `/src/public/avatar`)
+  fs.readdir(path, async (err, files) => {
+    res.send(
+      files.map((file) => {
+        return file
+      })
+    )
+  })
+})
+
 module.exports = uploadRouter
