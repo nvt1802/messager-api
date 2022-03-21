@@ -1,4 +1,5 @@
 const socketioJwt = require("socketio-jwt")
+const uuid = require("uuid")
 const model = require("../model")
 const { getPagination, getPagingData } = require("../common/pagination")
 
@@ -27,25 +28,109 @@ module.exports = (io) => {
     })
   )
 
-  io.on("connection", (socket) => {
-    socket.on("send", async (data) => {
-      await model.Message.create(data)
-      const page = 1
-      const size = data.size || 10
-      const pagination = getPagination(page, size)
-      const totalItems = await model.Message.findAll().then((res) => res.length)
-      const messages = await model.Message.findAll({
-        ...pagination,
-        order: [["updatedAt", "DESC"]],
+  io.on("connection", async (socket) => {
+    const listRoom = await model.Room.findAll()
+    listRoom.forEach((room) => {
+      socket.on(`send-room-${room?.id}`, async (data) => {
+        await model.Message.create(data)
+        const page = 1
+        const size = data.size || 10
+        const pagination = getPagination(page, size)
+        const totalItems = await model.Message.findAll().then(
+          (res) => res.length
+        )
+        try {
+          const messages = await model.Message.findAll({
+            ...pagination,
+            where: {
+              roomId: room?.id || "",
+            },
+            order: [["updatedAt", "DESC"]],
+          })
+          io.sockets.emit(
+            `send-room-${room?.id}`,
+            getPagingData(messages, totalItems, page, size).payload
+          )
+        } catch (_error) {}
       })
-      io.sockets.emit(
-        "send",
-        getPagingData(messages, totalItems, page, size).payload
-      )
+
+      socket.on(`typing-room-${room?.id}`, (data) => {
+        io.sockets.emit(`typing-room-${room?.id}`, data)
+      })
     })
 
-    socket.on("typing", (data) => {
-      io.sockets.emit("typing", data)
+    socket.on("create-room", async (data) => {
+      try {
+        const newId = uuid.v4()
+        const { listUser = [] } = data
+        await model.Room.create({
+          id: newId,
+          ...data,
+        })
+        listUser.forEach(async (item) => {
+          model.User.findAll({
+            where: {
+              email: item,
+            },
+          }).then(async (res) => {
+            await model.RoomDetail.create({
+              id: uuid.v4(),
+              roomId: newId,
+              userId: res[0]?.id,
+            })
+          })
+        })
+        const userDB = await model.User.findByPk(data.userId)
+        const listRoom = await model.RoomDetail.findAll({
+          where: {
+            userId: userDB?.id,
+          },
+          include: [
+            {
+              model: model.Room,
+            },
+          ],
+          order: [["updatedAt", "DESC"]],
+        })
+        io.sockets.emit("create-room", listRoom)
+      } catch (_error) {
+        console.log(_error)
+        io.sockets.emit("create-room", [])
+      }
+    })
+
+    socket.on("online", async (data) => {
+      await model.User.update(
+        { isOnline: true },
+        {
+          where: {
+            email: data?.email || "",
+          },
+        }
+      )
+      const users = await model.User.findAll({
+        where: {
+          isOnline: true,
+        },
+      })
+      io.sockets.emit("online", users)
+    })
+
+    socket.on("disconnect", async () => {
+      await model.User.update(
+        { isOnline: true },
+        {
+          where: {
+            email: socket?.decoded_token?.email || "",
+          },
+        }
+      )
+      const users = await model.User.findAll({
+        where: {
+          isOnline: false,
+        },
+      })
+      io.sockets.emit("online", users)
     })
   })
 }

@@ -19,10 +19,17 @@ const Room = sequelize.define(
     password: {
       type: dataTypes.STRING,
       validate: {
-        notEmpty: true,
+        notEmpty: false,
       },
       field: "password",
     },
+    createBy: {
+      type: dataTypes.STRING,
+      validate: {
+        notEmpty: true,
+      },
+      field: "createBy",
+    }
   },
   { timestamps: true }
 )

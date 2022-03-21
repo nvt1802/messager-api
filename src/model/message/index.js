@@ -5,6 +5,7 @@ const Message = sequelize.define(
   {
     username: dataTypes.STRING,
     message: dataTypes.STRING,
+    roomId: dataTypes.UUID,
   },
   { timestamps: true }
 )

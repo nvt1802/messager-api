@@ -2,6 +2,7 @@ const swaggerUi = require('swagger-ui-express')
 const model = require('../model')
 const authRouter = require('../api/auth')
 const messageRouter = require('../api/message')
+const uploadRouter = require('../api/upload')
 const swaggerDocument = require('../docs/swagger.json')
 
 module.exports = (app) => {
@@ -10,6 +11,7 @@ module.exports = (app) => {
 
   app.use(authRouter)
   app.use(messageRouter)
+  app.use(uploadRouter)
 
   var options = {
     explorer: false,
