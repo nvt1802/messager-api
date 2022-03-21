@@ -57,7 +57,7 @@ uploadRouter.get("/list-avatar", async (req, res) => {
   try {
     fs.readdir(path, async (err, files) => {
       res.send(
-        files.map((file) => {
+        files?.map((file) => {
           return file
         })
       )
