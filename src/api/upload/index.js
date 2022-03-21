@@ -35,7 +35,7 @@ uploadRouter.post("/upload-avatar", async (req, res) => {
       )
       try {
         if (!err) {
-          res.send(`http://${req.headers.host}/avatar/${req.file.filename}`)
+          res.send(`/avatar/${req.file.filename}`)
         }
       } catch (error) {
         res.send(error)
