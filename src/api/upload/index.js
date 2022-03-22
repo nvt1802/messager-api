@@ -1,69 +1,88 @@
 const uploadRouter = require("express").Router()
-const fs = require("fs")
-const model = require("../../model")
 const multer = require("multer")
-const pathMD = require("path")
-var os = require("os")
+const admin = require("firebase-admin")
+const jwt = require("jsonwebtoken")
 
-const storage = multer.diskStorage({
-  destination: (req, file, callback) => {
-    // vị trí upload lên
-    callback(null, "./src/public/avatar")
-  },
-  filename: (req, file, callback) => {
-    let math = ["image/png", "image/jpeg"]
-    if (math.indexOf(file.mimetype) === -1) {
-      let errorMess = `The file <strong>${file.originalname}</strong> is invalid. Only allowed to upload image jpeg or png.`
-      callback(errorMess, null)
-    } else {
-      const filename = `${Date.now()}-${file.originalname}`
-      callback(null, filename)
-    }
-  },
+const upload = multer({
+  storage: multer.memoryStorage(),
 })
 
-const upload = multer({ storage: storage }).single("files")
+const serviceAccount = require("./tai1802-firebase-adminsdk-lfk9d-255403aadd.json")
 
-uploadRouter.post("/upload-avatar", async (req, res) => {
-  upload(req, res, async (err) => {
-    if (err) {
-      res.send(req.body.oldPath)
-    } else {
-      let path = pathMD.join(
-        __dirname.split("src")[0],
-        `/src/public/avatar/${req.file.filename}`
-      )
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  storageBucket: "tai1802.appspot.com",
+})
+
+const bucket = admin.storage().bucket()
+
+uploadRouter.post("/upload-avatar", upload.single("files"), (req, res) => {
+  const authHeader = req.headers["authorization"]
+  const token = authHeader && authHeader.split(" ")[1]
+
+  if (token == null)
+    return res.status(401).json({
+      succcess: false,
+      msg: "Unauthorized !!!",
+    })
+
+  jwt.verify(
+    token,
+    process.env.ACCESS_TOKEN_SECRET || "tainv13",
+    async (err, user) => {
+      if (err) return res.status(401).json(err)
       try {
-        if (!err) {
-          res.send(`/avatar/${req.file.filename}`)
+        if (!req.file) {
+          return res.status(400).send("Error: No files found")
         }
+        const filePath = `avatar/${user.id}/${req.file.originalname}`
+        const blob = bucket.file(filePath)
+
+        const blobWriter = blob.createWriteStream({
+          metadata: {
+            contentType: req.file.mimetype,
+          },
+        })
+
+        blobWriter.on("error", (err) => {
+          console.log(err)
+        })
+
+        blobWriter.on("finish", () => {
+          res.status(200).send(filePath)
+        })
+
+        blobWriter.end(req.file.buffer)
       } catch (error) {
-        res.send(error)
+        res.json(error)
       }
     }
-  })
-})
-
-uploadRouter.get("/download-avatar", async (req, res) => {
-  let path = pathMD.join(
-    __dirname.split("src")[0],
-    `/src/public/avatar/${req.query.filename}`
   )
-  res.download(path)
 })
 
-uploadRouter.get("/list-avatar", async (req, res) => {
-  let path = pathMD.join(__dirname.split("src")[0], `/src/public/avatar`)
+const defaultStorage = admin.storage()
+
+uploadRouter.get("/download-avatar", (req, res) => {
   try {
-    fs.readdir(path, async (err, files) => {
-      res.send(
-        files?.map((file) => {
-          return file
+    const bucket = defaultStorage.bucket()
+    const file = bucket.file(req.query?.filePath)
+    const options = {
+      action: "read",
+      expires: "03-17-2025",
+    }
+    file.getSignedUrl(options).then((results) => {
+      if (Array.isArray(results) && results.length > 0) {
+        res.json({
+          url: results[0],
         })
-      )
+      } else {
+        res.json({
+          url: "",
+        })
+      }
     })
   } catch (error) {
-    res.send(error)
+    res.json(error)
   }
 })
 
