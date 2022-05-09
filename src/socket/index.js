@@ -1,24 +1,24 @@
-const socketioJwt = require("socketio-jwt")
-const uuid = require("uuid")
-const model = require("../model")
-const { getPagination, getPagingData } = require("../common/pagination")
+const socketioJwt = require("socketio-jwt");
+const uuid = require("uuid");
+const model = require("../model");
+const { getPagination, getPagingData } = require("../common/pagination");
 
 function removeItem(arr) {
   var what,
     a = arguments,
     L = a.length,
-    ax
+    ax;
   while (L > 1 && arr.length) {
-    what = a[--L]
+    what = a[--L];
     while ((ax = arr.indexOf(what)) !== -1) {
-      arr.splice(ax, 1)
+      arr.splice(ax, 1);
     }
   }
-  return arr
+  return arr;
 }
 
 module.exports = (io) => {
-  let listTyping = []
+  let listTyping = [];
 
   io.use(
     socketioJwt.authorize({
@@ -26,19 +26,19 @@ module.exports = (io) => {
       handshake: true,
       // auth_header_required: true,
     })
-  )
+  );
 
   io.on("connection", async (socket) => {
-    const listRoom = await model.Room.findAll()
+    const listRoom = await model.Room.findAll();
     listRoom.forEach((room) => {
       socket.on(`send-room-${room?.id}`, async (data) => {
-        await model.Message.create(data)
-        const page = 1
-        const size = data.size || 10
-        const pagination = getPagination(page, size)
+        await model.Message.create(data);
+        const page = 1;
+        const size = data.size || 10;
+        const pagination = getPagination(page, size);
         const totalItems = await model.Message.findAll().then(
           (res) => res.length
-        )
+        );
         try {
           const messages = await model.Message.findAll({
             ...pagination,
@@ -46,27 +46,27 @@ module.exports = (io) => {
               roomId: room?.id || "",
             },
             order: [["updatedAt", "DESC"]],
-          })
+          });
           io.sockets.emit(
             `send-room-${room?.id}`,
             getPagingData(messages, totalItems, page, size).payload
-          )
+          );
         } catch (_error) {}
-      })
+      });
 
       socket.on(`typing-room-${room?.id}`, (data) => {
-        io.sockets.emit(`typing-room-${room?.id}`, data)
-      })
-    })
+        io.sockets.emit(`typing-room-${room?.id}`, data);
+      });
+    });
 
     socket.on("create-room", async (data) => {
       try {
-        const newId = uuid.v4()
-        const { listUser = [] } = data
+        const newId = uuid.v4();
+        const { listUser = [] } = data;
         await model.Room.create({
           id: newId,
           ...data,
-        })
+        });
         listUser.forEach(async (item) => {
           model.User.findAll({
             where: {
@@ -77,10 +77,10 @@ module.exports = (io) => {
               id: uuid.v4(),
               roomId: newId,
               userId: res[0]?.id,
-            })
-          })
-        })
-        const userDB = await model.User.findByPk(data.userId)
+            });
+          });
+        });
+        const userDB = await model.User.findByPk(data.userId);
         const listRoom = await model.RoomDetail.findAll({
           where: {
             userId: userDB?.id,
@@ -91,13 +91,28 @@ module.exports = (io) => {
             },
           ],
           order: [["updatedAt", "DESC"]],
-        })
-        io.sockets.emit("create-room", listRoom)
+        });
+        io.sockets.emit("refesh-list-room", true);
       } catch (_error) {
-        console.log(_error)
-        io.sockets.emit("create-room", [])
+        console.log(_error);
+        io.sockets.emit("refesh-list-room", false);
       }
-    })
+    });
+
+    socket.on("rename-room", async (data) => {
+      try {
+        await model.Room.findOne({ where: { id: data?.roomId } }).then(
+          (res) => {
+            res.set(data?.room);
+            res.save();
+          }
+        );
+        io.sockets.emit("refesh-list-room", true);
+      } catch (_error) {
+        console.log(_error);
+        io.sockets.emit("refesh-list-room", false);
+      }
+    });
 
     socket.on("online", async (data) => {
       await model.User.update(
@@ -107,14 +122,14 @@ module.exports = (io) => {
             email: data?.email || "",
           },
         }
-      )
+      );
       const users = await model.User.findAll({
         where: {
           isOnline: true,
         },
-      })
-      io.sockets.emit("online", users)
-    })
+      });
+      io.sockets.emit("online", users);
+    });
 
     socket.on("disconnect", async () => {
       await model.User.update(
@@ -124,13 +139,13 @@ module.exports = (io) => {
             email: socket?.decoded_token?.email || "",
           },
         }
-      )
+      );
       const users = await model.User.findAll({
         where: {
           isOnline: false,
         },
-      })
-      io.sockets.emit("online", users)
-    })
-  })
-}
+      });
+      io.sockets.emit("online", users);
+    });
+  });
+};
