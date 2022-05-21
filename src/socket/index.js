@@ -51,6 +51,16 @@ module.exports = (io) => {
             `send-room-${room?.id}`,
             getPagingData(messages, totalItems, page, size).payload
           );
+          const userrr = await model.User.findOne({
+            where: {
+              email: data?.username,
+            },
+          });
+          io.sockets.emit(`notification`, {
+            ...data,
+            email: data.username,
+            name: userrr.name,
+          });
         } catch (_error) {}
       });
 
@@ -107,6 +117,25 @@ module.exports = (io) => {
             res.save();
           }
         );
+        io.sockets.emit("refesh-list-room", true);
+      } catch (_error) {
+        console.log(_error);
+        io.sockets.emit("refesh-list-room", false);
+      }
+    });
+
+    socket.on("leave-room", async (data) => {
+      try {
+        await model.RoomDetail.findOne({
+          where: { roomId: data?.roomId, userId: data?.userId },
+          include: [
+            {
+              model: model.Room,
+            },
+          ],
+        }).then((res) => {
+          res.destroy();
+        });
         io.sockets.emit("refesh-list-room", true);
       } catch (_error) {
         console.log(_error);
