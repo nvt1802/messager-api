@@ -25,16 +25,10 @@ const Post = sequelize.define(
     },
     content: {
       type: dataTypes.STRING,
-      validate: {
-        notEmpty: false,
-      },
       field: "content",
     },
     resources: {
       type: dataTypes.STRING(9000),
-      validate: {
-        notEmpty: false,
-      },
       field: "resources",
     },
   },
