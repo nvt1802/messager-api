@@ -4,7 +4,6 @@ const Role = require("./role");
 const Message = require("./message");
 const Room = require("./room");
 const RoomDetail = require("./room-detail");
-const Upload = require("./upload");
 const Post = require("./post");
 
 (async () => {
@@ -17,6 +16,5 @@ module.exports = {
   Message: Message,
   Room,
   RoomDetail,
-  Upload,
   Post,
 };
