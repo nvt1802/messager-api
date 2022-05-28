@@ -147,7 +147,6 @@ module.exports = (io) => {
     });
 
     socket.on("create-post", async (data) => {
-      console.log(data);
       try {
         const newId = uuid.v4();
         const userDB = await model.User.findByPk(data.userId);
