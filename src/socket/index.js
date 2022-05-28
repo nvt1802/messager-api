@@ -3,23 +3,7 @@ const uuid = require("uuid");
 const model = require("../model");
 const { getPagination, getPagingData } = require("../common/pagination");
 
-function removeItem(arr) {
-  var what,
-    a = arguments,
-    L = a.length,
-    ax;
-  while (L > 1 && arr.length) {
-    what = a[--L];
-    while ((ax = arr.indexOf(what)) !== -1) {
-      arr.splice(ax, 1);
-    }
-  }
-  return arr;
-}
-
 module.exports = (io) => {
-  let listTyping = [];
-
   io.use(
     socketioJwt.authorize({
       secret: process.env.ACCESS_TOKEN_SECRET,
@@ -28,6 +12,7 @@ module.exports = (io) => {
     })
   );
 
+  const users = {};
   io.on("connection", async (socket) => {
     const listRoom = await model.Room.findAll();
     listRoom.forEach((room) => {
@@ -60,6 +45,7 @@ module.exports = (io) => {
             ...data,
             email: data.username,
             name: userrr.name,
+            type: 1,
           });
         } catch (_error) {}
       });
@@ -143,38 +129,63 @@ module.exports = (io) => {
       }
     });
 
-    socket.on("online", async (data) => {
-      await model.User.update(
-        { isOnline: true },
-        {
+    socket.on(`send-post}`, async (data) => {
+      const page = 1;
+      const size = data.size || 10;
+      const pagination = getPagination(page, size);
+      const totalItems = await model.Post.findAll().then((res) => res.length);
+      try {
+        const listPost = await model.Post.findAll({
+          ...pagination,
+          order: [["updatedAt", "DESC"]],
+        });
+        io.sockets.emit(
+          `send-post`,
+          getPagingData(listPost, totalItems, page, size).payload
+        );
+      } catch (_error) {}
+    });
+
+    socket.on("create-post", async (data) => {
+      console.log(data);
+      try {
+        const newId = uuid.v4();
+        const userDB = await model.User.findByPk(data.userId);
+        await model.Post.create({
+          id: newId,
+          postBy: userDB?.id,
+          ...data,
+        });
+        io.sockets.emit("refesh-list-post", true);
+        const userrr = await model.User.findOne({
           where: {
-            email: data?.email || "",
+            id: data?.userId,
           },
-        }
-      );
-      const users = await model.User.findAll({
-        where: {
-          isOnline: true,
-        },
+        });
+        io.sockets.emit(`notification`, {
+          ...data,
+          ...userrr?.dataValues,
+          name: userrr.name,
+          type: 2,
+        });
+      } catch (_error) {
+        console.log(_error);
+        io.sockets.emit("refesh-list-post", false);
+      }
+    });
+
+    socket.on("login", async (data) => {
+      users[socket.id] = data;
+      const listAllUsers = await model.User.findAll();
+      io.sockets.emit("online", {
+        users,
+        listAllUsers,
       });
-      io.sockets.emit("online", users);
     });
 
     socket.on("disconnect", async () => {
-      await model.User.update(
-        { isOnline: true },
-        {
-          where: {
-            email: socket?.decoded_token?.email || "",
-          },
-        }
-      );
-      const users = await model.User.findAll({
-        where: {
-          isOnline: false,
-        },
-      });
-      io.sockets.emit("online", users);
+      delete users[socket.id];
+      io.sockets.emit("logout", users);
     });
   });
 };

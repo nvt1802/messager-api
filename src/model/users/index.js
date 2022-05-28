@@ -49,13 +49,6 @@ const Users = sequelize.define("users", {
     },
     field: "avatar",
   },
-  isOnline: {
-    type: dataTypes.BOOLEAN,
-    validate: {
-      notEmpty: false,
-    },
-    field: "isOnline",
-  },
 })
 
 Users.belongsTo(Role)

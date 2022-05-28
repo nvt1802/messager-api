@@ -1,14 +1,15 @@
-const { sequelize } = require("../config/database")
-const Users = require("./users")
-const Role = require("./role")
-const Message = require("./message")
-const Room = require("./room")
-const RoomDetail = require("./room-detail")
-const Upload = require("./upload")
+const { sequelize } = require("../config/database");
+const Users = require("./users");
+const Role = require("./role");
+const Message = require("./message");
+const Room = require("./room");
+const RoomDetail = require("./room-detail");
+const Upload = require("./upload");
+const Post = require("./post");
 
-;(async () => {
-  await sequelize.sync()
-})()
+(async () => {
+  await sequelize.sync();
+})();
 
 module.exports = {
   User: Users.Users,
@@ -17,4 +18,5 @@ module.exports = {
   Room,
   RoomDetail,
   Upload,
-}
+  Post,
+};
