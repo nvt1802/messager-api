@@ -24,7 +24,7 @@ const Post = sequelize.define(
       field: "tagsWith",
     },
     content: {
-      type: dataTypes.STRING,
+      type: dataTypes.STRING(2000),
       field: "content",
     },
     resources: {

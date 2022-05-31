@@ -135,7 +135,8 @@ messageRouter.get("/list-post", async (req, res) => {
       ...pagination,
       order: [["updatedAt", "DESC"]],
     });
-    res.json(getPagingData(listPost, totalItems, page, size));
+    const listReaction = await model.Reaction.findAll();
+    res.json(getPagingData({ listPost, listReaction }, totalItems, page, size));
   } catch (error) {
     res.json(error);
   }

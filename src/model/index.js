@@ -5,6 +5,8 @@ const Message = require("./message");
 const Room = require("./room");
 const RoomDetail = require("./room-detail");
 const Post = require("./post");
+const Reaction = require("./reaction");
+const Comment = require("./comment");
 
 (async () => {
   await sequelize.sync();
@@ -17,4 +19,6 @@ module.exports = {
   Room,
   RoomDetail,
   Post,
+  Reaction,
+  Comment,
 };
