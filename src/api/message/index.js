@@ -125,6 +125,48 @@ messageRouter.post("/update-profile", async (req, res) => {
   );
 });
 
+const getListPost = async (list = []) => {
+  return await Promise.all(
+    list.map(async (item) => {
+      const listReaction = await model.Reaction.findAll({
+        where: { postId: item?.id },
+      });
+      const listComment = await model.Comment.findAll({
+        where: { postId: item?.id },
+      });
+      const newListComment = await Promise.all(
+        listComment.map(async (itm) => {
+          const user = await model.User.findOne({
+            where: { id: itm?.dataValues?.userId },
+          });
+          return {
+            ...itm?.dataValues,
+            avatar: user?.avatar,
+            name: user?.name,
+          };
+        })
+      );
+      return {
+        ...item.dataValues,
+        reaction: {
+          listReaction,
+          totalLike: listReaction.filter((react) => react?.type === 1).length,
+          totalReactType2: listReaction.filter((react) => react?.type === 2)
+            .length,
+          totalReactType3: listReaction.filter((react) => react?.type === 3)
+            .length,
+          totalReactType4: listReaction.filter((react) => react?.type === 4)
+            .length,
+        },
+        comment: {
+          listComment: newListComment,
+          totalComment: newListComment.length,
+        },
+      };
+    })
+  );
+};
+
 messageRouter.get("/list-post", async (req, res) => {
   const page = req.query?.page || 1;
   const size = req.query?.size || 10;
@@ -135,8 +177,15 @@ messageRouter.get("/list-post", async (req, res) => {
       ...pagination,
       order: [["updatedAt", "DESC"]],
     });
-    const listReaction = await model.Reaction.findAll();
-    res.json(getPagingData({ listPost, listReaction }, totalItems, page, size));
+    // const listReaction = await model.Reaction.findAll();
+    res.json(
+      getPagingData(
+        { listPost: await getListPost(listPost) },
+        totalItems,
+        page,
+        size
+      )
+    );
   } catch (error) {
     res.json(error);
   }

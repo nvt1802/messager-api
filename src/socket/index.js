@@ -11,7 +11,20 @@ module.exports = (io) => {
       // auth_header_required: true,
     })
   );
-
+  const getReactIcon = (_type) => {
+    switch (_type) {
+      case 1:
+        return "👍";
+      case 2:
+        return "🤣";
+      case 3:
+        return "❤️";
+      case 4:
+        return "😍";
+      default:
+        break;
+    }
+  };
   const users = {};
   io.on("connection", async (socket) => {
     const listRoom = await model.Room.findAll();
@@ -170,6 +183,60 @@ module.exports = (io) => {
       } catch (_error) {
         console.log(_error);
         io.sockets.emit("refesh-list-post", false);
+      }
+    });
+
+    socket.on("reaction", async (data) => {
+      try {
+        const reactionId = uuid.v4();
+        const userDB = await model.User.findByPk(data.userId);
+        const { userId, postId, type: reactType } = data;
+        const countLike = await model.Reaction.count({
+          where: { postId, userId, type: reactType },
+        });
+
+        if (countLike === 0) {
+          await model.Reaction.create({
+            reactionId,
+            userId,
+            postId,
+            type: reactType,
+          });
+          const userrr = await model.User.findOne({
+            where: {
+              id: userId,
+            },
+          });
+          io.sockets.emit(`notification`, {
+            ...data,
+            ...userrr?.dataValues,
+            content: `${userDB?.name} đã ${getReactIcon(reactType)} bài viết`,
+            name: userrr.name,
+            type: 3,
+          });
+        } else {
+          await model.Reaction.findOne({
+            where: { postId, userId, type: reactType },
+          }).then((res) => {
+            res.destroy();
+          });
+        }
+
+        const listReaction = await model.Reaction.findAll({
+          where: { postId: postId },
+        });
+        io.sockets.emit(`refesh-reaction-post-${data?.postId}`, {
+          listReaction,
+          totalLike: listReaction.filter((react) => react?.type === 1).length,
+          totalReactType2: listReaction.filter((react) => react?.type === 2)
+            .length,
+          totalReactType3: listReaction.filter((react) => react?.type === 3)
+            .length,
+          totalReactType4: listReaction.filter((react) => react?.type === 4)
+            .length,
+        });
+      } catch (_error) {
+        console.log(_error);
       }
     });
 

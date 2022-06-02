@@ -32,7 +32,7 @@ const Comment = sequelize.define(
       validate: {
         notEmpty: true,
       },
-      field: "postId",
+      field: "commentReplyId",
     },
   },
   { timestamps: true }
